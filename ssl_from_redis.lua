@@ -16,6 +16,9 @@ if not ok then
     return exit(HTTP_INTERNAL_SERVER_ERROR)
 end
 
+-- use db number 3
+red:select(3)
+
 -- Setup TLS related.
 local ssl = require "ngx.ssl"
 local server_name = ssl.server_name()
