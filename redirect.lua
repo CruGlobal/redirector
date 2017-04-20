@@ -14,7 +14,7 @@ end
 -- use db number 3
 red:select(3)
 
-local target, err = red:get("redirect:" .. server_name)
+local target, err = red:get("domain_redirect:" .. server_name)
 if not target then
     ngx.log(ngx.ERR, "failed to get redis key: ", err)
     return ngx.exit(500)
