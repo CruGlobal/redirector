@@ -1,1 +1,5 @@
-.idea
+# IntelliJ products
+.idea/
+
+# OS
+.DS_Store
