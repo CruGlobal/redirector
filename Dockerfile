@@ -8,4 +8,7 @@ COPY config /
 RUN /usr/local/openresty/luajit/bin/luarocks install lua-resty-auto-ssl \
   && chown nobody /etc/resty-auto-ssl
 
+# Install lua-resty-url \
+RUN /usr/local/openresty/luajit/bin/luarocks install lua-resty-url
+
 WORKDIR /usr/local/openresty/nginx
