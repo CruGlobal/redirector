@@ -1,0 +1,38 @@
+[ req ]
+default_bits       = 4096
+distinguished_name = req_distinguished_name
+attributes	       = req_attributes
+
+# Stop confirmation prompts. All information is contained below.
+prompt = no
+
+# The extensions to add to a certificate request - see [ v3_req ]
+req_extensions		= v3_req
+
+[ req_distinguished_name ]
+countryName=US
+stateOrProvinceName=Florida
+localityName=Orlando
+organizationName=Cru
+organizationalUnitName=WordPress
+commonName=localhost
+emailAddress=devops-engineering@cru.org
+
+[ req_attributes ]
+# None. Could put Challenge Passwords, don't want them, leave empty
+
+[ v3_req ]
+
+# X509v3 extensions to add to a certificate request
+# See x509v3_config
+
+# What the key can/cannot be used for:
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth,serverAuth
+
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = localhost
+DNS.2 = localhost.cru.org
