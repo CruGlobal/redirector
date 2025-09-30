@@ -1,0 +1,4 @@
+caddy 2.10.2
+golang 1.25.1
+golangci-lint 2.5.0
+pre-commit 4.3.0
