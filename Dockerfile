@@ -2,7 +2,7 @@
 ARG CADDY_VERSION=0
 FROM public.ecr.aws/docker/library/caddy:${CADDY_VERSION}-builder-alpine AS builder
 
-WORKDIR /usr/src/app
+WORKDIR /usr/src/redir
 
 COPY go.mod go.sum ./
 RUN go mod download

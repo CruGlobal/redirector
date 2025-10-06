@@ -1,0 +1,60 @@
+# Terraform Provider testing workflow.
+name: Tests
+
+# This GitHub action runs your tests for each pull request.
+on:
+  pull_request:
+
+# Testing only needs permissions to read the repository contents.
+permissions:
+  contents: read
+
+jobs:
+  # Ensure the project builds before running tests
+  build:
+    name: Build / Format / Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: asdf-vm/actions/setup@v4
+      - uses: actions/cache@v4
+        id: asdf-cache
+        with:
+          path: ~/.asdf/
+          key: ${{ runner.os }}-asdf-${{ hashFiles('**/.tool-versions') }}
+      - uses: asdf-vm/actions/install@v4
+        if: steps.asdf-cache.outputs.cache-hit != 'true'
+      - uses: go-task/setup-task@v1
+      - run: go mod download
+      - run: task build
+      - run: task fmt
+      - run: task lint
+      - name: git diff
+        run: |
+          git diff --compact-summary --exit-code || \
+            (echo; echo "Unexpected difference in directories after code generation. Run 'task' command and commit."; exit 1)
+
+  # Run tests
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: asdf-vm/actions/setup@v4
+      - uses: actions/cache@v4
+        id: asdf-cache
+        with:
+          path: ~/.asdf/
+          key: ${{ runner.os }}-asdf-${{ hashFiles('**/.tool-versions') }}
+      - uses: asdf-vm/actions/install@v4
+        if: steps.asdf-cache.outputs.cache-hit != 'true'
+      - uses: go-task/setup-task@v1
+      - run: go mod download
+      - run: task test
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: CruGlobal/redirector
