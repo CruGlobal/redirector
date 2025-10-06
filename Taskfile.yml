@@ -1,0 +1,45 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task: fmt
+      - task: lint
+
+  build:
+    desc: Build the redirector app
+    cmds:
+      - go build -v ./...
+
+  fmt:
+    desc: Format the code
+    cmds:
+      - golangci-lint fmt
+
+  lint:
+    desc: Lint the code
+    cmds:
+      - golangci-lint run --fix
+
+  test:
+    desc: Run tests
+    env:
+      AWS_ACCESS_KEY_ID: TESTINGACCESSKEYID
+      AWS_SECRET_ACCESS_KEY: TESTINGSECRETACCESSKEY
+    silent: true
+    cmds:
+      - task: dynamodb:start
+      - defer: task dynamodb:stop
+      - go test -v -cover -coverprofile=coverage.out -covermode=atomic -timeout=120s ./...
+
+  "dynamodb:start":
+    desc: Start the DynamoDB Local container. Used for tests or local development.
+    cmds:
+      - docker compose -f compose.yml up -d
+
+  "dynamodb:stop":
+    desc: Stop the DynamoDB Local container (all data is lost)
+    cmds:
+      - docker compose -f compose.yml down

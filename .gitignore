@@ -1,5 +1,33 @@
-# IntelliJ products
-.idea/
+# Allowlisting gitignore template for GO projects prevents us
+# from adding various unwanted local files, such as generated
+# files, developer configurations or IDE-specific files etc.
+#
+# Recommended: Go.AllowList.gitignore
 
-# OS
-.DS_Store
+# Ignore everything
+*
+
+# But not these files...
+!/.github/**/*
+!/.gitignore
+!/.tool-versions
+!/.golangci.yml
+!/.goreleaser.yml
+!/.pre-commit-config.yaml
+!Taskfile.yml
+
+!*.go
+!go.sum
+!go.mod
+
+!README.md
+!LICENSE
+!CONTRIBUTING.md
+
+!build.sh
+!Dockerfile
+!compose.yml
+!Caddyfile
+
+# ...even if they are in subdirectories
+!*/
