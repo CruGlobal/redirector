@@ -26,6 +26,8 @@
 
 !build.sh
 !Dockerfile
+!compose.yml
+!Caddyfile
 
 # ...even if they are in subdirectories
 !*/

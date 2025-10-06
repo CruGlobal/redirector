@@ -1,0 +1,7 @@
+# DynamoDB for local development and testing
+services:
+  dynamodb:
+    container_name: dynamodb
+    image: amazon/dynamodb-local
+    ports:
+      - "8000:8000"
