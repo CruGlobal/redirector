@@ -3,8 +3,7 @@ name: Build & Deploy ECS
 on:
   push:
     branches:
-      # Automatically build and deploy master. Additional branches may be added.
-      - master
+      - main
       - staging
   workflow_dispatch:
     # Allows manual build and deploy of any branch/ref
@@ -16,7 +15,7 @@ on:
         default: 'false'
 
 jobs:
-  # Build and push container image to ECR. Builds occur in the project repository.
+  # Build and push a container image to ECR. Builds occur in the project repository.
   build:
     name: Build
     uses: CruGlobal/.github/.github/workflows/build-ecs.yml@v1
