@@ -1,4 +1,4 @@
-ARG OPENRESTY_VERSION=1.21.4.1
+ARG OPENRESTY_VERSION=1.27.1.2-4
 FROM openresty/openresty:$OPENRESTY_VERSION-alpine-fat
 
 LABEL com.datadoghq.ad.check_names='["nginx"]'
@@ -14,7 +14,7 @@ COPY docker /
 # Install lua-resty-auto-ssl and update to latest dehydrated
 RUN apk add --no-cache openssl \
     && LUA_LIBDIR=/usr/local/openresty/lualib /usr/local/openresty/luajit/bin/luarocks install lua-resty-auto-ssl \
-    && curl -LJOf https://raw.githubusercontent.com/dehydrated-io/dehydrated/v0.7.1/dehydrated \
+    && curl -LJOf https://raw.githubusercontent.com/dehydrated-io/dehydrated/v0.7.2/dehydrated \
     && chmod +x dehydrated \
     && mv dehydrated /usr/local/openresty/luajit/lib/luarocks/rocks-5.1/lua-resty-auto-ssl/0.13.1-1/bin/resty-auto-ssl/dehydrated \
     && opm get 3scale/lua-resty-url \
