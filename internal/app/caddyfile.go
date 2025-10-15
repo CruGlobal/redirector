@@ -13,10 +13,12 @@ func init() {
 // ParseRedirector sets up the App from Caddyfile tokens. Syntax:
 //
 //	{
-//	  redirector {
-//	    region us-east-1
-//	    endpoint http://127.0.0.1:8000
-//	  }
+//	    redirector {
+//	        region <region>
+//	        endpoint <endpoint>
+//	        table <table_name>
+//	        key <key_name>
+//	    }
 //	}
 func ParseRedirector(d *caddyfile.Dispenser, _ any) (any, error) {
 	app := new(App)
@@ -39,6 +41,10 @@ func ParseRedirector(d *caddyfile.Dispenser, _ any) (any, error) {
 				app.Region = configVal
 			case "endpoint":
 				app.Endpoint = configVal
+			case "table":
+				app.Table = configVal
+			case "key":
+				app.Key = configVal
 			default:
 				return nil, d.Errf("unknown parameter '%s' for 'redirector'", configKey)
 			}

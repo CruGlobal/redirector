@@ -54,9 +54,11 @@ func TestParseRedirector(t *testing.T) {
                 redirector {
                   region local
                   endpoint example.com
+                  table TableName
+                  key KeyName
                 }
             }`),
-			want: `{"region":"local","endpoint":"example.com"}`,
+			want: `{"region":"local","endpoint":"example.com","table":"TableName","key":"KeyName"}`,
 		},
 		{
 			name: "valid2",
@@ -82,12 +84,12 @@ func TestParseRedirector(t *testing.T) {
 			d: caddyfile.NewTestDispenser(`{
                 redirector {
                   region local
-                  table name
+                  foo name
                   endpoint example.com
                 }
             }`),
 			shouldErr: true,
-			err:       "unknown parameter 'table'",
+			err:       "unknown parameter 'foo'",
 		},
 	}
 

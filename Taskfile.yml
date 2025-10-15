@@ -30,6 +30,8 @@ tasks:
       AWS_SECRET_ACCESS_KEY: TESTINGSECRETACCESSKEY
       DYNAMODB_TESTING_ENDPOINT: http://localhost:8000
       DYNAMODB_TESTING_REGION: local
+      DYNAMODB_TESTING_TABLE: RedirectorConfigTest
+      DYNAMODB_TESTING_KEY: Hostname
     silent: true
     cmds:
       - task: dynamodb:start

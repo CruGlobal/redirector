@@ -1,15 +1,16 @@
 package permission_test
 
 import (
+	"os"
 	"testing"
 
+	"github.com/CruGlobal/redirector/internal/app"
 	"github.com/CruGlobal/redirector/internal/permission"
 	"github.com/CruGlobal/redirector/redirtest"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/caddyserver/caddy/v2"
-	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -19,8 +20,8 @@ func TestPermission_NewPermission(t *testing.T) {
 	perm := permission.NewPermission()
 	assert.NotNil(t, perm)
 	assert.IsType(t, &permission.Permission{}, perm)
-	assert.Equal(t, permission.DefaultTable, perm.Table)
-	assert.Equal(t, permission.DefaultKey, perm.Key)
+	assert.Equal(t, app.DefaultTable, perm.Table)
+	assert.Equal(t, app.DefaultKey, perm.Key)
 }
 
 func TestPermission_CaddyModule(t *testing.T) {
@@ -36,105 +37,10 @@ func TestPermission_Provision(t *testing.T) {
 	perm := permission.NewPermission()
 	err := perm.Provision(ctx)
 	require.NoError(t, err)
-}
 
-func TestPermission_UnmarshalCaddyfile(t *testing.T) {
-	testcases := []struct {
-		name      string
-		caddyfile string
-		expected  *permission.Permission
-		expectErr bool
-	}{
-		{
-			name: "valid1",
-			caddyfile: `dynamodb {
-				table TestTableName
-				key TestKey
-			}`,
-			expected: &permission.Permission{
-				Table: "TestTableName",
-				Key:   "TestKey",
-			},
-			expectErr: false,
-		},
-		{
-			name: "valid2",
-			caddyfile: `dynamodb {
-				table TestTableName
-			}`,
-			expected: &permission.Permission{
-				Table: "TestTableName",
-				Key:   permission.DefaultKey,
-			},
-			expectErr: false,
-		},
-		{
-			name: "valid3",
-			caddyfile: `dynamodb {
-				key TestKey
-			}`,
-			expected: &permission.Permission{
-				Table: permission.DefaultTable,
-				Key:   "TestKey",
-			},
-			expectErr: false,
-		},
-		{
-			name:      "valid4",
-			caddyfile: `dynamodb`,
-			expected: &permission.Permission{
-				Table: permission.DefaultTable,
-				Key:   permission.DefaultKey,
-			},
-			expectErr: false,
-		},
-		{
-			name: "valid5",
-			caddyfile: `dynamodb {
-			}`,
-			expected: &permission.Permission{
-				Table: permission.DefaultTable,
-				Key:   permission.DefaultKey,
-			},
-			expectErr: false,
-		},
-		{
-			name: "invalid",
-			caddyfile: `dynamodb name {
-				key TestKey
-			}`,
-			expected:  nil,
-			expectErr: true,
-		},
-		{
-			name: "invalid2",
-			caddyfile: `dynamodb {
-				key TestKey
-				extra value
-			}`,
-			expected:  nil,
-			expectErr: true,
-		},
-		{
-			name:      "invalid3",
-			caddyfile: `dynamodb {}`,
-			expected:  nil,
-			expectErr: true,
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			perm := permission.NewPermission()
-			err := perm.UnmarshalCaddyfile(caddyfile.NewTestDispenser(tc.caddyfile))
-			if tc.expectErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tc.expected, perm)
-		})
-	}
+	assert.NotNil(t, perm.Client)
+	assert.Equal(t, os.Getenv("DYNAMODB_TESTING_TABLE"), perm.Table)
+	assert.Equal(t, os.Getenv("DYNAMODB_TESTING_KEY"), perm.Key)
 }
 
 type PermissionTestSuite struct {
@@ -143,26 +49,20 @@ type PermissionTestSuite struct {
 	permission *permission.Permission
 }
 
-const (
-	testTable = "TestingTableName"
-	testKey   = "TestKey"
-)
-
 func (ts *PermissionTestSuite) SetupSuite() {
-	client := redirtest.NewDynamoDBClient(ts.T())
-	redirtest.CreateDynamoDBTable(ts.T(), client, testTable, testKey)
+	ctx := redirtest.NewRedirectorCaddyContext(ts.T())
 
-	perm := permission.Permission{
-		Table:  testTable,
-		Key:    testKey,
-		Client: client,
-	}
+	perm := permission.NewPermission()
+	err := perm.Provision(ctx)
+	ts.Require().NoError(err)
 
-	ts.permission = &perm
+	redirtest.CreateDynamoDBTable(ts.T(), perm.Client, perm.Table, perm.Key)
+
+	ts.permission = perm
 }
 
 func (ts *PermissionTestSuite) TearDownSuite() {
-	redirtest.DeleteDynamoDBTable(ts.T(), ts.permission.Client, testTable)
+	redirtest.DeleteDynamoDBTable(ts.T(), ts.permission.Client, ts.permission.Table)
 }
 
 func (ts *PermissionTestSuite) TestPermission_CertificateAllowed() {
@@ -172,9 +72,9 @@ func (ts *PermissionTestSuite) TestPermission_CertificateAllowed() {
 
 	for _, key := range validKeys {
 		_, err := ts.permission.Client.PutItem(ctx, &dynamodb.PutItemInput{
-			TableName: aws.String(testTable),
+			TableName: aws.String(ts.permission.Table),
 			Item: map[string]types.AttributeValue{
-				testKey: &types.AttributeValueMemberS{Value: key},
+				ts.permission.Key: &types.AttributeValueMemberS{Value: key},
 			},
 		})
 		ts.Require().NoError(err)

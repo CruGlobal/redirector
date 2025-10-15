@@ -8,7 +8,9 @@ import (
 )
 
 const (
-	AppName = "redirector"
+	AppName      = "redirector"
+	DefaultTable = "RedirectorConfigProd"
+	DefaultKey   = "Hostname"
 )
 
 var (
@@ -30,11 +32,15 @@ type App struct {
 
 	Region   string `json:"region,omitempty"`
 	Endpoint string `json:"endpoint,omitempty"`
+	Table    string `json:"table,omitempty"`
+	Key      string `json:"key,omitempty"`
 }
 
 func NewApp() *App {
 	r := App{
 		Region: "us-east-1",
+		Table:  DefaultTable,
+		Key:    DefaultKey,
 	}
 	return &r
 }

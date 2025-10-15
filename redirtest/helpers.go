@@ -22,12 +22,19 @@ func NewRedirectorCaddyContext(t *testing.T) caddy.Context {
 	redirector {
 		region %s
 		endpoint %s
+		table %s
+		key %s
 	}
 	log {
 		level ERROR
 	}
 }
-`, os.Getenv("DYNAMODB_TESTING_REGION"), os.Getenv("DYNAMODB_TESTING_ENDPOINT"))
+`,
+		os.Getenv("DYNAMODB_TESTING_REGION"),
+		os.Getenv("DYNAMODB_TESTING_ENDPOINT"),
+		os.Getenv("DYNAMODB_TESTING_TABLE"),
+		os.Getenv("DYNAMODB_TESTING_KEY"),
+	)
 	adapter := caddyfile.Adapter{ServerType: &httpcaddyfile.ServerType{}}
 	adaptedJSON, warnings, err := adapter.Adapt([]byte(caddyfileInput), nil)
 	require.NoError(t, err)

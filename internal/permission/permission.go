@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"go.uber.org/zap"
 
 	"github.com/caddyserver/caddy/v2"
@@ -19,14 +18,8 @@ import (
 var (
 	// Interface guards.
 	_ caddy.Module                = (*Permission)(nil)
-	_ caddyfile.Unmarshaler       = (*Permission)(nil)
 	_ caddy.Provisioner           = (*Permission)(nil)
 	_ caddytls.OnDemandPermission = (*Permission)(nil)
-)
-
-const (
-	DefaultTable = "RedirectorConfigProd"
-	DefaultKey   = "Hostname"
 )
 
 type Permission struct {
@@ -43,12 +36,12 @@ func init() {
 
 func NewPermission() *Permission {
 	return &Permission{
-		Table: DefaultTable,
-		Key:   DefaultKey,
+		Table: app.DefaultTable,
+		Key:   app.DefaultKey,
 	}
 }
 
-func (perm Permission) CaddyModule() caddy.ModuleInfo {
+func (p Permission) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID: "tls.permission.dynamodb",
 		New: func() caddy.Module {
@@ -57,63 +50,38 @@ func (perm Permission) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (perm *Permission) Provision(ctx caddy.Context) error {
-	perm.logger = ctx.Logger(perm)
+func (p *Permission) Provision(ctx caddy.Context) error {
+	p.logger = ctx.Logger(p)
 
 	module, err := ctx.App("redirector")
 	if err != nil {
 		return err
 	}
 
-	redir, ok := module.(*app.App)
+	redirectorApp, ok := module.(*app.App)
 	if !ok {
 		return fmt.Errorf("unexpected module type: %T", module)
 	}
-	if redir == nil {
+	if redirectorApp == nil {
 		return errors.New("redirector has not been initialized")
 	}
 
-	if redir.Client == nil {
+	if redirectorApp.Client == nil {
 		return errors.New("DynamoDB client has not been initialized")
 	}
 
-	perm.Client = redir.Client
+	p.Client = redirectorApp.Client
+	p.Table = redirectorApp.Table
+	p.Key = redirectorApp.Key
 
 	return nil
 }
 
-func (perm *Permission) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	for d.Next() {
-		if d.NextArg() {
-			return d.ArgErr()
-		}
-
-		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			configKey := d.Val()
-			var configVal string
-
-			if !d.Args(&configVal) {
-				return d.ArgErr()
-			}
-
-			switch configKey {
-			case "table":
-				perm.Table = configVal
-			case "key":
-				perm.Key = configVal
-			default:
-				return d.Errf("unknown parameter '%s' for 'dynamodb'", configKey)
-			}
-		}
-	}
-	return nil
-}
-
-func (perm *Permission) CertificateAllowed(ctx context.Context, name string) error {
-	item, err := perm.Client.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(perm.Table),
+func (p *Permission) CertificateAllowed(ctx context.Context, name string) error {
+	item, err := p.Client.GetItem(ctx, &dynamodb.GetItemInput{
+		TableName: aws.String(p.Table),
 		Key: map[string]types.AttributeValue{
-			perm.Key: &types.AttributeValueMemberS{Value: name},
+			p.Key: &types.AttributeValueMemberS{Value: name},
 		},
 	})
 	if err != nil {
