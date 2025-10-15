@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/CruGlobal/redirector/internal/redirector/app"
+	"github.com/CruGlobal/redirector/internal/app"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	// Interface guards.
 	_ caddy.Module                = (*Permission)(nil)
 	_ caddyfile.Unmarshaler       = (*Permission)(nil)
 	_ caddy.Provisioner           = (*Permission)(nil)
@@ -24,8 +25,8 @@ var (
 )
 
 const (
-	DefaultDynamoDBTable = "RedirectorAppProd"
-	DefaultDynamoDBKey   = "Hostname"
+	DefaultTable = "RedirectorConfigProd"
+	DefaultKey   = "Hostname"
 )
 
 type Permission struct {
@@ -42,8 +43,8 @@ func init() {
 
 func NewPermission() *Permission {
 	return &Permission{
-		Table: DefaultDynamoDBTable,
-		Key:   DefaultDynamoDBKey,
+		Table: DefaultTable,
+		Key:   DefaultKey,
 	}
 }
 
@@ -73,7 +74,7 @@ func (perm *Permission) Provision(ctx caddy.Context) error {
 	}
 
 	if redir.Client == nil {
-		return errors.New("DynamoDB client has been initialized")
+		return errors.New("DynamoDB client has not been initialized")
 	}
 
 	perm.Client = redir.Client

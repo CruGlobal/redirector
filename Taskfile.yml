@@ -28,11 +28,13 @@ tasks:
     env:
       AWS_ACCESS_KEY_ID: TESTINGACCESSKEYID
       AWS_SECRET_ACCESS_KEY: TESTINGSECRETACCESSKEY
+      DYNAMODB_TESTING_ENDPOINT: http://localhost:8000
+      DYNAMODB_TESTING_REGION: local
     silent: true
     cmds:
       - task: dynamodb:start
       - defer: task dynamodb:stop
-      - go test -v -cover -coverprofile=coverage.out -covermode=atomic -timeout=120s ./...
+      - go test -cover -coverprofile=coverage.out -covermode=atomic -timeout=120s {{.CLI_ARGS}} ./...
 
   "dynamodb:start":
     desc: Start the DynamoDB Local container. Used for tests or local development.

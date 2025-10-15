@@ -3,7 +3,7 @@ package app_test
 import (
 	"testing"
 
-	"github.com/CruGlobal/redirector/internal/redirector/app"
+	"github.com/CruGlobal/redirector/internal/app"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/stretchr/testify/assert"
@@ -54,10 +54,9 @@ func TestParseRedirector(t *testing.T) {
                 redirector {
                   region local
                   endpoint example.com
-                  disable_ssl true
                 }
             }`),
-			want: `{"disable_ssl":true,"region":"local","endpoint":"example.com"}`,
+			want: `{"region":"local","endpoint":"example.com"}`,
 		},
 		{
 			name: "valid2",
@@ -85,7 +84,6 @@ func TestParseRedirector(t *testing.T) {
                   region local
                   table name
                   endpoint example.com
-                  disable_ssl true
                 }
             }`),
 			shouldErr: true,

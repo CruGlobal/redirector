@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	appName = "redirector"
+	AppName = "redirector"
 )
 
 var (
@@ -28,28 +28,26 @@ type App struct {
 	Client *dynamodb.Client `json:"-"`
 	logger *zap.Logger
 
-	Region     string `json:"region,omitempty"`
-	Endpoint   string `json:"endpoint,omitempty"`
-	DisableSSL bool   `json:"disable_ssl,omitempty"`
+	Region   string `json:"region,omitempty"`
+	Endpoint string `json:"endpoint,omitempty"`
 }
 
 func NewApp() *App {
 	r := App{
-		Region:     "us-east-1",
-		DisableSSL: false,
+		Region: "us-east-1",
 	}
 	return &r
 }
 
 func (app App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "redirector",
+		ID:  AppName,
 		New: func() caddy.Module { return NewApp() },
 	}
 }
 
 func (app *App) Provision(ctx caddy.Context) error {
-	app.Name = appName
+	app.Name = AppName
 	app.logger = ctx.Logger(app)
 
 	app.logger.Info(
@@ -65,9 +63,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return err
 	}
-	app.Client = dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
-		o.EndpointOptions.DisableHTTPS = app.DisableSSL
-	})
+	app.Client = dynamodb.NewFromConfig(cfg)
 
 	return nil
 }

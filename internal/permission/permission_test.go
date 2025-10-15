@@ -1,13 +1,11 @@
 package permission_test
 
 import (
-	"context"
 	"testing"
 
-	"github.com/CruGlobal/redirector/internal/redirector/permission"
+	"github.com/CruGlobal/redirector/internal/permission"
 	"github.com/CruGlobal/redirector/redirtest"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/caddyserver/caddy/v2"
@@ -21,8 +19,8 @@ func TestPermission_NewPermission(t *testing.T) {
 	perm := permission.NewPermission()
 	assert.NotNil(t, perm)
 	assert.IsType(t, &permission.Permission{}, perm)
-	assert.Equal(t, permission.DefaultDynamoDBTable, perm.Table)
-	assert.Equal(t, permission.DefaultDynamoDBKey, perm.Key)
+	assert.Equal(t, permission.DefaultTable, perm.Table)
+	assert.Equal(t, permission.DefaultKey, perm.Key)
 }
 
 func TestPermission_CaddyModule(t *testing.T) {
@@ -66,7 +64,7 @@ func TestPermission_UnmarshalCaddyfile(t *testing.T) {
 			}`,
 			expected: &permission.Permission{
 				Table: "TestTableName",
-				Key:   permission.DefaultDynamoDBKey,
+				Key:   permission.DefaultKey,
 			},
 			expectErr: false,
 		},
@@ -76,7 +74,7 @@ func TestPermission_UnmarshalCaddyfile(t *testing.T) {
 				key TestKey
 			}`,
 			expected: &permission.Permission{
-				Table: permission.DefaultDynamoDBTable,
+				Table: permission.DefaultTable,
 				Key:   "TestKey",
 			},
 			expectErr: false,
@@ -85,8 +83,8 @@ func TestPermission_UnmarshalCaddyfile(t *testing.T) {
 			name:      "valid4",
 			caddyfile: `dynamodb`,
 			expected: &permission.Permission{
-				Table: permission.DefaultDynamoDBTable,
-				Key:   permission.DefaultDynamoDBKey,
+				Table: permission.DefaultTable,
+				Key:   permission.DefaultKey,
 			},
 			expectErr: false,
 		},
@@ -95,8 +93,8 @@ func TestPermission_UnmarshalCaddyfile(t *testing.T) {
 			caddyfile: `dynamodb {
 			}`,
 			expected: &permission.Permission{
-				Table: permission.DefaultDynamoDBTable,
-				Key:   permission.DefaultDynamoDBKey,
+				Table: permission.DefaultTable,
+				Key:   permission.DefaultKey,
 			},
 			expectErr: false,
 		},
@@ -150,37 +148,9 @@ const (
 	testKey   = "TestKey"
 )
 
-func (s *PermissionTestSuite) SetupSuite() {
-	ctx := context.Background()
-
-	cfg, _ := config.LoadDefaultConfig(
-		ctx,
-		config.WithRegion("local"),
-		config.WithBaseEndpoint("http://localhost:8000"),
-	)
-	client := dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
-		o.EndpointOptions.DisableHTTPS = true
-	})
-
-	_, err := client.CreateTable(ctx, &dynamodb.CreateTableInput{
-		TableName:   aws.String(testTable),
-		BillingMode: types.BillingModePayPerRequest,
-		KeySchema: []types.KeySchemaElement{
-			{
-				AttributeName: aws.String(testKey),
-				KeyType:       types.KeyTypeHash,
-			},
-		},
-		AttributeDefinitions: []types.AttributeDefinition{
-			{
-				AttributeName: aws.String(testKey),
-				AttributeType: types.ScalarAttributeTypeS,
-			},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
+func (ts *PermissionTestSuite) SetupSuite() {
+	client := redirtest.NewDynamoDBClient(ts.T())
+	redirtest.CreateDynamoDBTable(ts.T(), client, testTable, testKey)
 
 	perm := permission.Permission{
 		Table:  testTable,
@@ -188,39 +158,36 @@ func (s *PermissionTestSuite) SetupSuite() {
 		Client: client,
 	}
 
-	s.permission = &perm
+	ts.permission = &perm
 }
 
-func (s *PermissionTestSuite) TearDownSuite() {
-	_, err := s.permission.Client.DeleteTable(s.T().Context(), &dynamodb.DeleteTableInput{
-		TableName: aws.String(testTable),
-	})
-	s.Require().NoError(err)
+func (ts *PermissionTestSuite) TearDownSuite() {
+	redirtest.DeleteDynamoDBTable(ts.T(), ts.permission.Client, testTable)
 }
 
-func (s *PermissionTestSuite) TestPermission_CertificateAllowed() {
-	ctx := s.T().Context()
+func (ts *PermissionTestSuite) TestPermission_CertificateAllowed() {
+	ctx := ts.T().Context()
 	validKeys := []string{"example.com", "www.example.com", "starkindustries.com"}
 	invalidKeys := []string{"www.starkindustries.com", "ftp.example.com"}
 
 	for _, key := range validKeys {
-		_, err := s.permission.Client.PutItem(ctx, &dynamodb.PutItemInput{
+		_, err := ts.permission.Client.PutItem(ctx, &dynamodb.PutItemInput{
 			TableName: aws.String(testTable),
 			Item: map[string]types.AttributeValue{
 				testKey: &types.AttributeValueMemberS{Value: key},
 			},
 		})
-		s.Require().NoError(err)
+		ts.Require().NoError(err)
 	}
 
 	for _, valid := range validKeys {
-		err := s.permission.CertificateAllowed(ctx, valid)
-		s.Require().NoError(err)
+		err := ts.permission.CertificateAllowed(ctx, valid)
+		ts.Require().NoError(err)
 	}
 
 	for _, invalid := range invalidKeys {
-		err := s.permission.CertificateAllowed(ctx, invalid)
-		s.Require().Error(err)
+		err := ts.permission.CertificateAllowed(ctx, invalid)
+		ts.Require().Error(err)
 	}
 }
 

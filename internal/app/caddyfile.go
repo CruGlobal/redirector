@@ -1,8 +1,6 @@
 package app
 
 import (
-	"strconv"
-
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
@@ -14,13 +12,12 @@ func init() {
 
 // ParseRedirector sets up the App from Caddyfile tokens. Syntax:
 //
-//		{
-//		  redirector {
-//		    region us-east-1
-//		    endpoint 127.0.0.1:8000
-//	        disable_ssl true
-//		  }
-//		}
+//	{
+//	  redirector {
+//	    region us-east-1
+//	    endpoint http://127.0.0.1:8000
+//	  }
+//	}
 func ParseRedirector(d *caddyfile.Dispenser, _ any) (any, error) {
 	app := new(App)
 
@@ -42,12 +39,6 @@ func ParseRedirector(d *caddyfile.Dispenser, _ any) (any, error) {
 				app.Region = configVal
 			case "endpoint":
 				app.Endpoint = configVal
-			case "disable_ssl":
-				disableSSL, err := strconv.ParseBool(configVal)
-				if err != nil {
-					return nil, d.Errf("invalid boolean value for 'disable_ssl': %s", configVal)
-				}
-				app.DisableSSL = disableSSL
 			default:
 				return nil, d.Errf("unknown parameter '%s' for 'redirector'", configKey)
 			}
@@ -55,7 +46,7 @@ func ParseRedirector(d *caddyfile.Dispenser, _ any) (any, error) {
 	}
 
 	return httpcaddyfile.App{
-		Name:  appName,
+		Name:  AppName,
 		Value: caddyconfig.JSON(app, nil),
 	}, nil
 }
