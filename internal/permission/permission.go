@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"go.uber.org/zap"
 
 	"github.com/caddyserver/caddy/v2"
@@ -19,6 +20,7 @@ var (
 	// Interface guards.
 	_ caddy.Module                = (*Permission)(nil)
 	_ caddy.Provisioner           = (*Permission)(nil)
+	_ caddyfile.Unmarshaler       = (*Permission)(nil)
 	_ caddytls.OnDemandPermission = (*Permission)(nil)
 )
 
@@ -48,6 +50,15 @@ func (p Permission) CaddyModule() caddy.ModuleInfo {
 			return NewPermission()
 		},
 	}
+}
+
+func (p *Permission) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	for d.Next() {
+		if d.Next() {
+			return d.ArgErr()
+		}
+	}
+	return nil
 }
 
 func (p *Permission) Provision(ctx caddy.Context) error {

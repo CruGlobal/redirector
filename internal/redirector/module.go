@@ -1,25 +1,33 @@
 package redirector
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 
 	"github.com/CruGlobal/redirector/internal/app"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/caddyserver/caddy/v2"
-	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"go.uber.org/zap"
 )
 
 var (
 	// Interface guards.
-	_ caddy.Provisioner     = (*Redirector)(nil)
-	_ caddy.Module          = (*Redirector)(nil)
-	_ caddyfile.Unmarshaler = (*Redirector)(nil)
+	_ caddy.Provisioner           = (*Redirector)(nil)
+	_ caddy.Module                = (*Redirector)(nil)
+	_ caddyhttp.MiddlewareHandler = (*Redirector)(nil)
 )
 
 func init() {
 	caddy.RegisterModule(Redirector{})
+	httpcaddyfile.RegisterHandlerDirective("redirector", parseCaddyfile)
 }
 
 type Redirector struct {
@@ -54,48 +62,66 @@ func (r *Redirector) Provision(ctx caddy.Context) error {
 		return err
 	}
 
-	redir, ok := module.(*app.App)
+	m, ok := module.(*app.App)
 	if !ok {
 		return fmt.Errorf("unexpected module type: %T", module)
 	}
-	if redir == nil {
+	if m == nil {
 		return errors.New("redirector has not been initialized")
 	}
 
-	if redir.Client == nil {
+	if m.Client == nil {
 		return errors.New("DynamoDB client has not been initialized")
 	}
 
-	r.Client = redir.Client
-	r.Table = redir.Table
-	r.Client = redir.Client
+	r.Client = m.Client
+	r.Table = m.Table
+	r.Client = m.Client
 
 	return nil
 }
 
-func (r *Redirector) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	for d.Next() {
-		if d.NextArg() {
-			return d.ArgErr()
-		}
+func parseCaddyfile(_ httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+	// Redirector has no configuration, so we just return a new instance
+	return NewRedirector(), nil
+}
 
-		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			configKey := d.Val()
-			var configVal string
-
-			if !d.Args(&configVal) {
-				return d.ArgErr()
-			}
-
-			switch configKey {
-			case "table":
-				r.Table = configVal
-			case "key":
-				r.Key = configVal
-			default:
-				return d.Errf("unknown parameter '%s' for 'dynamodb'", configKey)
-			}
-		}
+func (r Redirector) ServeHTTP(writer http.ResponseWriter, request *http.Request, handler caddyhttp.Handler) error {
+	// Split host and port
+	hostname, _, err := net.SplitHostPort(request.Host)
+	if err != nil {
+		hostname = request.Host // Probably OK, host just didn't have a port
 	}
-	return nil
+	useCache := !request.URL.Query().Has("skip_cache")
+
+	writer.Header().Set("Server", "redirector")
+
+	redirect, err := r.GetRedirect(request.Context(), hostname, useCache)
+	if err != nil {
+		return handler.ServeHTTP(writer, request)
+	}
+	return redirect.ServeHTTP(writer, request)
+}
+
+func (r *Redirector) GetRedirect(ctx context.Context, hostname string, _ bool) (*Redirect, error) {
+	// TODO: Implement caching
+	item, err := r.Client.GetItem(ctx, &dynamodb.GetItemInput{
+		TableName: aws.String(r.Table),
+		Key: map[string]types.AttributeValue{
+			r.Key: &types.AttributeValueMemberS{Value: hostname},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if item.Item == nil {
+		return nil, errors.New("no redirect found")
+	}
+
+	var redirect Redirect
+	err = attributevalue.UnmarshalMap(item.Item, &redirect)
+	if err != nil {
+		return nil, err
+	}
+	return &redirect, nil
 }

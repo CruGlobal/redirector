@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -29,6 +30,56 @@ func TestPermission_CaddyModule(t *testing.T) {
 	assert.IsType(t, caddy.ModuleInfo{}, module)
 	assert.Equal(t, caddy.ModuleID("tls.permission.dynamodb"), module.ID)
 	assert.IsType(t, &permission.Permission{}, module.New())
+}
+
+func TestPermission_UnmarshalCaddyfile(t *testing.T) {
+	testcases := []struct {
+		name      string
+		caddyfile string
+		expectErr bool
+	}{
+		{
+			name:      "valid1",
+			caddyfile: `dynamodb`,
+			expectErr: false,
+		},
+		{
+			name:      "invalid1",
+			caddyfile: `dynamodb {}`,
+			expectErr: true,
+		},
+		{
+			name: "invalid2",
+			caddyfile: `dynamodb {
+			}`,
+			expectErr: true,
+		},
+		{
+			name: "invalid3",
+			caddyfile: `dynamodb name {
+			}`,
+			expectErr: true,
+		},
+		{
+			name: "invalid4",
+			caddyfile: `dynamodb {
+				key TestKey
+			}`,
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := permission.NewPermission()
+			err := p.UnmarshalCaddyfile(caddyfile.NewTestDispenser(tc.caddyfile))
+			if tc.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestPermission_Provision(t *testing.T) {

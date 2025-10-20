@@ -5,6 +5,7 @@ import (
 
 	_ "github.com/CruGlobal/redirector/internal/app"
 	_ "github.com/CruGlobal/redirector/internal/permission"
+	_ "github.com/CruGlobal/redirector/internal/redirector"
 	_ "github.com/CruGlobal/redirector/internal/storage"
 	_ "github.com/caddyserver/caddy/v2/modules/standard"
 )

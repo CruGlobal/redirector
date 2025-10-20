@@ -23,6 +23,14 @@ tasks:
     cmds:
       - golangci-lint run --fix
 
+  run:
+    desc: Run the redirector app locally
+    env:
+      AWS_ACCESS_KEY_ID: DEVELOPMENTACCESSKEYID
+      AWS_SECRET_ACCESS_KEY: DEVELOPMENTSECRETACCESSKEY
+    cmds:
+      - go run ./cmd/redirector run --config assets/config/Caddyfile
+
   test:
     desc: Run tests
     env:

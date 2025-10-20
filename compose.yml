@@ -3,5 +3,6 @@ services:
   dynamodb:
     container_name: dynamodb
     image: amazon/dynamodb-local
+    command: -jar DynamoDBLocal.jar -disableTelemetry -sharedDb
     ports:
       - "8000:8000"
