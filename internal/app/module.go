@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	AppName      = "redirector"
-	DefaultTable = "RedirectorConfigProd"
-	DefaultKey   = "Hostname"
+	AppName       = "redirector"
+	DefaultRegion = "us-east-1"
+	DefaultTable  = "RedirectorConfigProd"
+	DefaultKey    = "Hostname"
 )
 
 var (
@@ -38,7 +39,7 @@ type App struct {
 
 func NewApp() *App {
 	r := App{
-		Region: "us-east-1",
+		Region: DefaultRegion,
 		Table:  DefaultTable,
 		Key:    DefaultKey,
 	}
@@ -55,6 +56,12 @@ func (app App) CaddyModule() caddy.ModuleInfo {
 func (app *App) Provision(ctx caddy.Context) error {
 	app.Name = AppName
 	app.logger = ctx.Logger(app)
+
+	repl := caddy.NewReplacer()
+
+	app.Region = repl.ReplaceAll(app.Region, DefaultRegion)
+	app.Table = repl.ReplaceAll(app.Table, DefaultTable)
+	app.Key = repl.ReplaceAll(app.Key, DefaultKey)
 
 	app.logger.Info(
 		"provisioning app instance",

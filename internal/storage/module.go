@@ -72,6 +72,9 @@ func (dbs *DynamoDBStorage) Provision(ctx caddy.Context) error {
 	}
 	dbs.Client = redir.Client
 
+	repl := caddy.NewReplacer()
+	dbs.Table = repl.ReplaceAll(dbs.Table, DefaultTable)
+
 	dbs.Locker, err = dynamolock.New(dbs.Client, dbs.Table,
 		dynamolock.WithPartitionKeyName("Key"),
 		dynamolock.WithLeaseDuration(LeaseDuration),
