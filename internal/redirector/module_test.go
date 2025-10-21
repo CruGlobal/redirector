@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/CruGlobal/redirector/internal/app"
@@ -66,13 +67,26 @@ func (ts *RedirectorTestSuite) SetupSuite() {
 var redirects = []redirector.Redirect{
 	{
 		Hostname: "www.example.com",
-		Location: "https://example.com",
+		Location: "example.com",
 	},
 	{
 		Hostname: "example.org",
 		Type:     redirector.TypeRedirect,
 		Status:   redirector.StatusPermanent,
-		Location: "https://www.example.org",
+		Location: "www.example.org",
+	},
+	{
+		Hostname: "www.example.info",
+		Type:     redirector.TypeRedirect,
+		Status:   redirector.StatusTemporary,
+		Location: "example.info",
+		Rewrites: []redirector.Rewrite{
+			{
+				RegExp:  redirector.RewriteRegexp{Regexp: regexp.MustCompile(`^(.*)$`)},
+				Replace: "$1",
+				Final:   true,
+			},
+		},
 	},
 }
 
@@ -122,6 +136,11 @@ func (ts *RedirectorTestSuite) TestRedirector_GetRedirect() {
 			name:      "missing redirect",
 			hostname:  "example.edu",
 			expectErr: true,
+		},
+		{
+			name:     "redirect with rewrites",
+			hostname: "www.example.info",
+			expect:   redirects[2],
 		},
 	}
 	for _, tc := range tests {
@@ -181,6 +200,18 @@ func (ts *RedirectorTestSuite) TestRedirector_ServeHTTP() {
 			method:    "GET",
 			url:       "https://example.edu",
 			expectErr: true,
+		},
+		{
+			name:   "redirect with rewrites",
+			method: "GET",
+			url:    "https://www.example.info/foo/bar/baz",
+			response: response{
+				status: 302,
+				headers: map[string][]string{
+					"Location": {"https://example.info/foo/bar/baz"},
+					"Server":   {"redirector"},
+				},
+			},
 		},
 	}
 	for _, tc := range tests {
